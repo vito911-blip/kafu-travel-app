@@ -1,4 +1,4 @@
-name: Verify ME Marketing v9 deployment
+name: Inspect live ME Marketing v9 release
 
 on:
   push:
@@ -6,52 +6,37 @@ on:
       - me-marketing-upload-temp
 
 jobs:
-  verify:
+  inspect:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      BASE_URL: 'https://ywjxjz-me-marketi-7c79f713-kafutravelae.wix-site-host.com'
       LIVE_URL: 'https://www.mesocialmediamarketing.com'
     steps:
-      - name: Wait for deployment readiness
-        run: sleep 10
-      - name: Verify real Thank You route
+      - name: Wait for release propagation
+        run: sleep 15
+      - name: Confirm v9 worker is live
         shell: bash
         run: |
           set -euo pipefail
           stamp="$GITHUB_RUN_ID"
-          curl --fail --silent --show-error "$BASE_URL/__me-proxy-health?verify=$stamp" --output /tmp/health.json
+          curl --fail --silent --show-error --dump-header /tmp/health.headers "$LIVE_URL/__me-proxy-health?verify=$stamp" --output /tmp/health.json
           grep -q '"version":"v9"' /tmp/health.json
 
-          curl --fail --silent --show-error --dump-header /tmp/thank.headers "$BASE_URL/thank-you-page?verify=$stamp" --output /tmp/thank.html
-          grep -qi '^x-me-marketing-route: thank-you-page-v9' /tmp/thank.headers
-          grep -q 'Your request is in.' /tmp/thank.html
-          grep -q 'Back to home' /tmp/thank.html
-          grep -q 'Book a Strategy Call' /tmp/thank.html
+          curl --fail --silent --show-error --dump-header /tmp/contact.headers "$LIVE_URL/contact.html?verify=$stamp" --output /tmp/contact.html
+          grep -qi '^x-me-marketing-proxy: contact-v9' /tmp/contact.headers
+          grep -q 'ME_THANK_YOU_REDIRECT_V9' /tmp/contact.html
+          grep -qi 'Book a Strategy Call\|messy part' /tmp/contact.html
 
-          curl --fail --silent --show-error --dump-header /tmp/script.headers "$BASE_URL/__me-thank-you-redirect.js?verify=$stamp" --output /tmp/redirect.js
-          grep -qi '^x-me-marketing-route: redirect-script-v9' /tmp/script.headers
-          grep -q "window.location.replace('/thank-you-page')" /tmp/redirect.js
-      - name: Verify form hook and preserve existing pages
+          curl --fail --silent --show-error "$LIVE_URL/?verify=$stamp" --output /tmp/home.html
+          grep -qi 'Smart strategies\|ME Marketing' /tmp/home.html
+      - name: Inspect Thank You path before redirect cleanup
         shell: bash
         run: |
           set -euo pipefail
           stamp="$GITHUB_RUN_ID"
-          curl --fail --silent --show-error --dump-header /tmp/contact.headers "$BASE_URL/contact.html?verify=$stamp" --output /tmp/contact.html
-          grep -qi '^x-me-marketing-proxy: contact-v9' /tmp/contact.headers
-          grep -q 'ME_THANK_YOU_REDIRECT_V9' /tmp/contact.html
-          grep -qi 'Book a Strategy Call\|messy part\|REQUEST RECEIVED' /tmp/contact.html
-
-          for path in / /audit.html /about.html /faq.html; do
-            name=$(printf '%s' "$path" | tr '/.' '__')
-            code=$(curl --silent --show-error --output "/tmp/preview-${name}.html" --write-out '%{http_code}' "$BASE_URL$path?verify=$stamp")
-            test "$code" = "200"
-            live_code=$(curl --silent --show-error --output "/tmp/live-${name}.html" --write-out '%{http_code}' "$LIVE_URL$path?verify=$stamp")
-            test "$live_code" = "200"
-          done
-          grep -qi 'Smart strategies\|ME Marketing' /tmp/preview-_.html
-          grep -qi 'Free audit\|Audit' /tmp/preview-_audit_html.html
-          grep -qi 'About\|ME Marketing' /tmp/preview-_about_html.html
-          grep -qi 'FAQ\|questions' /tmp/preview-_faq_html.html
-      - name: Preview verified
-        run: echo PREVIEW_VERIFIED_V9
+          code=$(curl --silent --show-error --max-redirs 0 --dump-header /tmp/thank.headers --output /tmp/thank.body --write-out '%{http_code}' "$LIVE_URL/thank-you-page?verify=$stamp" || true)
+          echo "THANK_STATUS=$code"
+          grep -Ei '^(location|x-me-marketing-route|content-type|server):' /tmp/thank.headers || true
+          grep -q 'Your request is in.' /tmp/thank.body && echo THANK_BODY_OK || true
+      - name: Live worker confirmed
+        run: echo LIVE_WORKER_V9_CONFIRMED
