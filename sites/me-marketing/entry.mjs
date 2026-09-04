@@ -117,7 +117,8 @@ function normalizePath(pathname){
 async function proxyToCurrentSite(request,url){
   var target=new URL(url.pathname+url.search,ORIGIN);
   var headers=new Headers(request.headers);
-  ['host','content-length','connection'].forEach(function(name){headers.delete(name)});
+  ['content-length','connection'].forEach(function(name){headers.delete(name)});
+  headers.set('host','www.mesocialmediamarketing.com');
   var init={method:request.method,headers:headers,redirect:'manual'};
   if(request.method!=='GET'&&request.method!=='HEAD')init.body=await request.arrayBuffer();
   var upstream=await fetch(target,init);
@@ -134,13 +135,13 @@ async function proxyToCurrentSite(request,url){
   }
   if(request.method==='GET'&&normalizePath(url.pathname)==='/contact.html'&&(outHeaders.get('content-type')||'').indexOf('text/html')>=0){
     var html=await upstream.text();
-    if(html.indexOf('ME_THANK_YOU_REDIRECT_V6')<0){
-      var injection='<!--ME_THANK_YOU_REDIRECT_V6--><script src="/__me-thank-you-redirect.js" defer></script>';
+    if(html.indexOf('ME_THANK_YOU_REDIRECT_V8')<0){
+      var injection='<!--ME_THANK_YOU_REDIRECT_V8--><script src="/__me-thank-you-redirect.js" defer></script>';
       html=/<\/body>/i.test(html)?html.replace(/<\/body>/i,injection+'</body>'):html+injection;
     }
     outHeaders.set('content-type','text/html; charset=utf-8');
     outHeaders.set('cache-control','no-store, max-age=0');
-    outHeaders.set('x-me-marketing-proxy','contact-v6');
+    outHeaders.set('x-me-marketing-proxy','contact-v8');
     return new Response(html,{status:upstream.status,headers:outHeaders});
   }
   return new Response(upstream.body,{status:upstream.status,statusText:upstream.statusText,headers:outHeaders});
@@ -155,18 +156,18 @@ export default {
         return new Response(THANK_YOU_HTML,{status:200,headers:{
           'content-type':'text/html; charset=utf-8',
           'cache-control':'no-store, max-age=0',
-          'x-me-marketing-route':'thank-you-page-v6'
+          'x-me-marketing-route':'thank-you-page-v8'
         }});
       }
       if(path==='/__me-thank-you-redirect.js'){
         return new Response(SUCCESS_REDIRECT_JS,{status:200,headers:{
           'content-type':'application/javascript; charset=utf-8',
           'cache-control':'no-store, max-age=0',
-          'x-me-marketing-route':'redirect-script-v6'
+          'x-me-marketing-route':'redirect-script-v8'
         }});
       }
       if(path==='/__me-proxy-health'){
-        return new Response(JSON.stringify({ok:true,version:'v6',origin:ORIGIN}),{status:200,headers:{
+        return new Response(JSON.stringify({ok:true,version:'v8',origin:ORIGIN}),{status:200,headers:{
           'content-type':'application/json; charset=utf-8',
           'cache-control':'no-store, max-age=0'
         }});
