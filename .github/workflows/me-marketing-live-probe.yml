@@ -1,0 +1,52 @@
+name: ME Marketing live-host probe
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Collect public site and DNS evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p probe
+          curl -fsSIL https://www.mesocialmediamarketing.com/ > probe/root-headers.txt
+          curl -fsSL https://www.mesocialmediamarketing.com/ > probe/index.html
+          curl -fsSL https://www.mesocialmediamarketing.com/contact.html > probe/contact.html
+          {
+            echo '=== A apex ==='
+            dig +short A mesocialmediamarketing.com
+            echo '=== A www ==='
+            dig +short A www.mesocialmediamarketing.com
+            echo '=== CNAME www ==='
+            dig +short CNAME www.mesocialmediamarketing.com
+            echo '=== NS ==='
+            dig +short NS mesocialmediamarketing.com
+            echo '=== MX ==='
+            dig +short MX mesocialmediamarketing.com
+            echo '=== TLS/HTTP ==='
+            curl -fsSIL https://www.mesocialmediamarketing.com/contact.html
+          } > probe/network.txt
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          for name in ('index.html','contact.html'):
+              text = Path('probe', name).read_text(errors='replace')
+              urls = sorted(set(re.findall(r'(?:src|href)=["\']([^"\']+)', text, re.I)))
+              Path('probe', name + '.assets.txt').write_text('\n'.join(urls))
+          PY
+      - name: Upload probe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: me-marketing-live-probe
+          path: probe
+          if-no-files-found: error
+          retention-days: 1
