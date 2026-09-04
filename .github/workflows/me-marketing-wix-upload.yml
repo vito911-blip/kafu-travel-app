@@ -1,4 +1,4 @@
-name: Package ME Marketing deploy files
+name: Upload ME Marketing Thank You deployment assets
 
 on:
   push:
@@ -9,31 +9,30 @@ permissions:
   contents: read
 
 jobs:
-  package-files:
+  upload-assets:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      JS_URL: 'https://wix-code-file-storage.s3.amazonaws.com/e115d009-de90-4f65-a63e-032acdc78c5c/statics/05141585-ae18-48b7-880f-6c66e469acfb/14a786d0e26b1ed813b55957e246565a?X-Amz-Security-Token=IQoJb3JpZ2luX2VjECsaCXVzLXdlc3QtMiJIMEYCIQD4Uu1akuSJsecLC4WKDdVC1%2BOHAuArMMgz%2F2QCVa6whQIhAIzfJupEGsZFAyUM39DKUqtUtx75ct%2FU6xpQ0hAQfkTpKs4FCPP%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQBRoMNDE1MjA4NzU2NTYxIgyNwnHGGYbmWj5F6pEqogVKY%2BNpCKuffnKQBrDLAD9iIOOtBqXVb0FJ0zo%2FxZxovzwLJEbCyAulmMXcrYSotJMlZajEt%2FHrisym5n%2FooOHrMlZ%2BFYQ9zhcaXIwZOnFH%2BCWMcreFWBmjn8yN%2B3%2FO4Lr%2BViaSKNJdoO75RvfIYRO6MymF0yZ5JCid771EnQFxO2YLkF2ndFqBOcom0PpQCXu9lt1l3u4tZc84kmHXyac5vtr1TfUvkXDJKWk719%2FPcTEOOxBbSNfzXJSWN9rRko29oftahHFY5TBtQLlgEcIi2QsswRP048Y%2FfjLhh1OZ5gp7QtDzFUvsWZw18pN4lVpDFxyEY1zOUwdRYXf7jKtLiNRkR2S4VeID%2BJ0doh2y5vkAA3DnCSmKmCsPvN5zJW3wIXOEaNUFwhHWdSUi2MLOFxObMXo8lzFa3hVxiACjQEHQLz9cFJh6ldEm9EmongrAIhWTvDwq18jThU5%2BcArWLlyfwWVoLUKwX1ZkQ6M0pjS03Qg1nZp%2FpavKhp0sgfOYXskFA8zGRSnSPuRDlyPiNUiahZIDcGUmxMf3Lkbfv%2B147HGhliJ8RAjq%2FT%2BjcBjs9wwrKOTU3%2B7VO2V9EeYTxUsP7crOETJlSMmmudrBy6GPLxYQaW%2Bed7RZ4RxLPlGNKQanzMdgqA%2BytY7%2FCjfKEIzbbCopSUZNO6C%2BgD0WAJmsLeec1Ypb2jShw9oGFBYL2HBY4BZSIq2iEJHPThSSj6Z5vkkNZjFCZm7itHDWAWjwzfkhTT8NYYZq4sIkDpovY8NAduhYkf2lGfdBzMHQ3Aazr6S2GoMFG0fhN4Sn55XbGBXK%2Bs4zswjKN95TLG84L2986JfL9jQWKIJxIvXkgE5wS1zgaPWlhdUoEGIkCe6Ln1msQkeTz51itjusujqnuTCIxerUBjqPAWOPPvDhSPSj6KjBzQCvQAAQqHVUjmKemu%2BZAekgewckUDurGk%2B8wB56F%2BLCmbF84zYUH%2F4dBYWzvPCn0uRDknEVoFYlEK9hU2VDwDbFn30EufXgjlPeiCM42DMUbHfcPwZ7qP7xn6TRKeQswQ%2FIy%2FB0VjmulpX0JHqLh9nNkrSy%2FgQb0T%2FTxj%2BUSYJhL4IB&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260904T141440Z&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Credential=ASIAWBLC62VIS6YZNLNM%2F20260904%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=3600&X-Amz-Signature=f9b67245b53569b6d1307fbc644a802aa847a5d06f559ebccc4b2467ba64baba'
+      PAGE_URL: 'https://wix-code-file-storage.s3.amazonaws.com/e115d009-de90-4f65-a63e-032acdc78c5c/statics/05141585-ae18-48b7-880f-6c66e469acfb/0773fcb7e09cd63aac5efca6a2fb9161?X-Amz-Security-Token=IQoJb3JpZ2luX2VjECsaCXVzLXdlc3QtMiJIMEYCIQD4Uu1akuSJsecLC4WKDdVC1%2BOHAuArMMgz%2F2QCVa6whQIhAIzfJupEGsZFAyUM39DKUqtUtx75ct%2FU6xpQ0hAQfkTpKs4FCPP%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQBRoMNDE1MjA4NzU2NTYxIgyNwnHGGYbmWj5F6pEqogVKY%2BNpCKuffnKQBrDLAD9iIOOtBqXVb0FJ0zo%2FxZxovzwLJEbCyAulmMXcrYSotJMlZajEt%2FHrisym5n%2FooOHrMlZ%2BFYQ9zhcaXIwZOnFH%2BCWMcreFWBmjn8yN%2B3%2FO4Lr%2BViaSKNJdoO75RvfIYRO6MymF0yZ5JCid771EnQFxO2YLkF2ndFqBOcom0PpQCXu9lt1l3u4tZc84kmHXyac5vtr1TfUvkXDJKWk719%2FPcTEOOxBbSNfzXJSWN9rRko29oftahHFY5TBtQLlgEcIi2QsswRP048Y%2FfjLhh1OZ5gp7QtDzFUvsWZw18pN4lVpDFxyEY1zOUwdRYXf7jKtLiNRkR2S4VeID%2BJ0doh2y5vkAA3DnCSmKmCsPvN5zJW3wIXOEaNUFwhHWdSUi2MLOFxObMXo8lzFa3hVxiACjQEHQLz9cFJh6ldEm9EmongrAIhWTvDwq18jThU5%2BcArWLlyfwWVoLUKwX1ZkQ6M0pjS03Qg1nZp%2FpavKhp0sgfOYXskFA8zGRSnSPuRDlyPiNUiahZIDcGUmxMf3Lkbfv%2B147HGhliJ8RAjq%2FT%2BjcBjs9wwrKOTU3%2B7VO2V9EeYTxUsP7crOETJlSMmmudrBy6GPLxYQaW%2Bed7RZ4RxLPlGNKQanzMdgqA%2BytY7%2FCjfKEIzbbCopSUZNO6C%2BgD0WAJmsLeec1Ypb2jShw9oGFBYL2HBY4BZSIq2iEJHPThSSj6Z5vkkNZjFCZm7itHDWAWjwzfkhTT8NYYZq4sIkDpovY8NAduhYkf2lGfdBzMHQ3Aazr6S2GoMFG0fhN4Sn55XbGBXK%2Bs4zswjKN95TLG84L2986JfL9jQWKIJxIvXkgE5wS1zgaPWlhdUoEGIkCe6Ln1msQkeTz51itjusujqnuTCIxerUBjqPAWOPPvDhSPSj6KjBzQCvQAAQqHVUjmKemu%2BZAekgewckUDurGk%2B8wB56F%2BLCmbF84zYUH%2F4dBYWzvPCn0uRDknEVoFYlEK9hU2VDwDbFn30EufXgjlPeiCM42DMUbHfcPwZ7qP7xn6TRKeQswQ%2FIy%2FB0VjmulpX0JHqLh9nNkrSy%2FgQb0T%2FTxj%2BUSYJhL4IB&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260904T141440Z&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Credential=ASIAWBLC62VIS6YZNLNM%2F20260904%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=3600&X-Amz-Signature=daa80f3d81a6d540e50b07ed9e7e32d0542062f2bbd9818f4c7d5972aa46715f'
     steps:
-      - name: Check out branch
+      - name: Check out deployment files
         uses: actions/checkout@v4
         with:
           ref: me-marketing-upload-temp
-      - name: Verify deploy files
+      - name: Verify exact assets
         shell: bash
         run: |
           set -euo pipefail
-          node --check sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js
           test "$(wc -c < sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js | tr -d ' ')" = '4781'
+          test "$(md5sum sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js | awk '{print $1}')" = '14a786d0e26b1ed813b55957e246565a'
           test "$(wc -c < sites/me-marketing-live/thank-you-page | tr -d ' ')" = '6878'
-          grep -q 'window.location.assign("/thank-you-page")' sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js
-          grep -q 'Your request' sites/me-marketing-live/thank-you-page
-      - name: Upload deploy files
-        uses: actions/upload-artifact@v4
-        with:
-          name: me-marketing-deploy-files
-          path: |
-            sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js
-            sites/me-marketing-live/thank-you-page
-            sites/me-marketing-live/thank-you-page.html
-            sites/me-marketing-live/deployment-manifest.json
-          if-no-files-found: error
-          retention-days: 1
+          test "$(md5sum sites/me-marketing-live/thank-you-page | awk '{print $1}')" = '0773fcb7e09cd63aac5efca6a2fb9161'
+          node --check sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js
+      - name: Upload changed files to Wix deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error -X PUT -H 'Content-Type: text/javascript' --data-binary @sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js "$JS_URL"
+          curl --fail-with-body --silent --show-error -X PUT -H 'Content-Type: text/html' --data-binary @sites/me-marketing-live/thank-you-page "$PAGE_URL"
+          echo 'Wix deployment assets uploaded successfully.'
