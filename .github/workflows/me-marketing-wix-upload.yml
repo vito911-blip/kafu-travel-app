@@ -1,4 +1,4 @@
-name: Diagnose ME Marketing root route
+name: Inspect live ME Marketing routing
 
 on:
   push:
@@ -6,30 +6,45 @@ on:
       - me-marketing-upload-temp
 
 jobs:
-  diagnose:
+  inspect:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      BASE_URL: 'https://g9isku-me-marketi-7c79f713-kafutravelae.wix-site-host.com'
+      LIVE_URL: 'https://www.mesocialmediamarketing.com'
       ORIGIN_URL: 'https://3zpa7h-me-marketi-7c79f713-kafutravelae.wix-site-host.com'
+      NEW_URL: 'https://g9isku-me-marketi-7c79f713-kafutravelae.wix-site-host.com'
     steps:
-      - name: Check origin and proxy paths
+      - name: Inspect DNS and headers
         shell: bash
         run: |
           set -euo pipefail
+          echo 'DNS:'
+          dig +short www.mesocialmediamarketing.com || true
           for label_url in \
-            "origin-root|$ORIGIN_URL/" \
-            "origin-index|$ORIGIN_URL/index.html" \
-            "proxy-root|$BASE_URL/" \
-            "proxy-index|$BASE_URL/index.html" \
-            "proxy-contact|$BASE_URL/contact.html" \
-            "proxy-thank|$BASE_URL/thank-you-page"; do
+            "live-home|$LIVE_URL/" \
+            "live-contact|$LIVE_URL/contact.html" \
+            "origin-home|$ORIGIN_URL/" \
+            "origin-contact|$ORIGIN_URL/contact.html" \
+            "new-home|$NEW_URL/" \
+            "new-contact|$NEW_URL/contact.html"; do
             label="${label_url%%|*}"
             url="${label_url#*|}"
-            code=$(curl --silent --show-error --output "/tmp/${label}.body" --write-out '%{http_code}' "$url?verify=$GITHUB_RUN_ID")
-            size=$(wc -c < "/tmp/${label}.body" | tr -d ' ')
-            echo "$label status=$code bytes=$size"
+            code=$(curl --silent --show-error --dump-header "/tmp/${label}.headers" --output "/tmp/${label}.body" --write-out '%{http_code}' "$url?inspect=$GITHUB_RUN_ID")
+            echo "$label status=$code bytes=$(wc -c < "/tmp/${label}.body" | tr -d ' ') sha=$(sha256sum "/tmp/${label}.body" | cut -d' ' -f1)"
+            grep -Ei '^(server|via|x-wix|x-seen|cache-control|content-type|location|etag|cf-ray|x-powered-by):' "/tmp/${label}.headers" || true
           done
-          grep -qi 'ME Marketing\|Smart strategies' /tmp/proxy-index.body
-          grep -q 'ME_THANK_YOU_REDIRECT_V6' /tmp/proxy-contact.body
-          grep -q 'Your request is in.' /tmp/proxy-thank.body
+      - name: Test origin host routing headers
+        shell: bash
+        run: |
+          set -euo pipefail
+          for spec in \
+            'host|Host: www.mesocialmediamarketing.com' \
+            'forwarded|X-Forwarded-Host: www.mesocialmediamarketing.com' \
+            'original|X-Original-Host: www.mesocialmediamarketing.com' \
+            'wix-original|X-Wix-Original-Host: www.mesocialmediamarketing.com'; do
+            label="${spec%%|*}"
+            header="${spec#*|}"
+            code=$(curl --silent --show-error --header "$header" --output "/tmp/header-${label}.body" --write-out '%{http_code}' "$ORIGIN_URL/contact.html?inspect=$GITHUB_RUN_ID")
+            echo "$label status=$code bytes=$(wc -c < "/tmp/header-${label}.body" | tr -d ' ') sha=$(sha256sum "/tmp/header-${label}.body" | cut -d' ' -f1)"
+            grep -q 'Bring us the messy part' "/tmp/header-${label}.body" && echo "$label CONTENT_OK" || true
+          done
