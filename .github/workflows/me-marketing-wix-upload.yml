@@ -1,4 +1,4 @@
-name: Verify ME Marketing Thank You preview
+name: Verify live ME Marketing Thank You deployment
 
 on:
   push:
@@ -9,26 +9,37 @@ permissions:
   contents: read
 
 jobs:
-  verify-preview:
+  verify-live:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 6
     env:
-      BASE_URL: 'https://jxbmmk-me-marketi-cab8d612-bsmarket12.wix-site-host.com'
+      BASE_URL: 'https://www.mesocialmediamarketing.com'
     steps:
-      - name: Verify preserved pages and new Thank You flow
+      - name: Wait for release propagation and verify live routes
         shell: bash
         run: |
           set -euo pipefail
-          stamp="$(date +%s)"
-          curl --fail-with-body --silent --show-error "$BASE_URL/?v=$stamp" -o /tmp/home.html
-          curl --fail-with-body --silent --show-error "$BASE_URL/contact.html?v=$stamp" -o /tmp/contact.html
-          curl --fail-with-body --silent --show-error "$BASE_URL/_astro/ContactForm.Cy6qf6_z.js?v=$stamp" -o /tmp/contact-form.js
-          curl --fail-with-body --silent --show-error "$BASE_URL/thank-you-page?v=$stamp" -o /tmp/thank-you.html
-          curl --fail-with-body --silent --show-error "$BASE_URL/thank-you-page.html?v=$stamp" -o /tmp/thank-you-html.html
-          grep -q 'Smart strategies' /tmp/home.html
-          grep -q 'Bring us the' /tmp/contact.html
-          grep -q 'window.location.assign("/thank-you-page")' /tmp/contact-form.js
-          grep -q 'Thank You · ME Marketing' /tmp/thank-you.html
-          grep -q 'Your request' /tmp/thank-you.html
-          cmp /tmp/thank-you.html /tmp/thank-you-html.html
-          echo 'Preview verified: existing site preserved, form redirects after success, and both Thank You routes return the branded page.'
+          passed=0
+          for attempt in $(seq 1 24); do
+            stamp="$(date +%s)-$attempt"
+            rm -f /tmp/home.html /tmp/contact.html /tmp/contact-form.js /tmp/thank-you.html /tmp/thank-you-html.html
+            if curl -L --fail-with-body --silent --show-error "$BASE_URL/?v=$stamp" -o /tmp/home.html \
+              && curl -L --fail-with-body --silent --show-error "$BASE_URL/contact.html?v=$stamp" -o /tmp/contact.html \
+              && curl -L --fail-with-body --silent --show-error "$BASE_URL/_astro/ContactForm.Cy6qf6_z.js?v=$stamp" -o /tmp/contact-form.js \
+              && curl -L --fail-with-body --silent --show-error "$BASE_URL/thank-you-page?v=$stamp" -o /tmp/thank-you.html \
+              && curl -L --fail-with-body --silent --show-error "$BASE_URL/thank-you-page.html?v=$stamp" -o /tmp/thank-you-html.html \
+              && grep -q 'Smart strategies' /tmp/home.html \
+              && grep -q 'Bring us the' /tmp/contact.html \
+              && grep -q 'window.location.assign("/thank-you-page")' /tmp/contact-form.js \
+              && grep -q 'Thank You · ME Marketing' /tmp/thank-you.html \
+              && grep -q 'Your request' /tmp/thank-you.html \
+              && cmp /tmp/thank-you.html /tmp/thank-you-html.html; then
+                passed=1
+                echo "Live verification passed on attempt $attempt."
+                break
+            fi
+            echo "Release not fully propagated yet; attempt $attempt/24."
+            sleep 5
+          done
+          test "$passed" = '1'
+          echo 'LIVE OK: existing pages load, the published form bundle redirects after success, and the branded Thank You page returns successfully on the custom domain.'
