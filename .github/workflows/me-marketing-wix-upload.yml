@@ -1,4 +1,4 @@
-name: Fetch actual live ME Marketing frontend files
+name: Build actual ME Marketing Thank You route
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  fetch-live-files:
+  build-thank-you-route:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -19,19 +19,145 @@ jobs:
         with:
           ref: me-marketing-upload-temp
           fetch-depth: 0
-      - name: Download current production files
+      - name: Redirect successful form submissions
         shell: bash
         run: |
           set -euo pipefail
-          base='https://bf9wic-me-marketi-cab8d612-bsmarket12.wix-site-host.com'
-          mkdir -p sites/me-marketing-live/_astro
-          curl --fail --silent --show-error "$base/contact.html" -o sites/me-marketing-live/contact.html
-          curl --fail --silent --show-error "$base/index.html" -o sites/me-marketing-live/index.html
-          curl --fail --silent --show-error "$base/_astro/ContactForm.Cy6qf6_z.js" -o sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js')
+          source = path.read_text()
+          old = 'if(i.status==="PENDING"||i.status==="CONFIRMED"){u({}),o("success");return}'
+          new = 'if(i.status==="PENDING"||i.status==="CONFIRMED"){window.location.assign("/thank-you-page");return}'
+          if old not in source:
+              raise SystemExit('Expected success-state code was not found; refusing an unsafe patch.')
+          source = source.replace(old, new, 1)
+          path.write_text(source)
+          PY
           node --check sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js
-          test "$(wc -c < sites/me-marketing-live/contact.html | tr -d ' ')" = '18889'
-          test "$(wc -c < sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js | tr -d ' ')" = '4758'
-      - name: Commit captured files
+      - name: Create standalone Thank You page
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/thank-you-page.html <<'HTML'
+          <!DOCTYPE html>
+          <html lang="en" dir="ltr">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+            <meta name="robots" content="noindex, follow">
+            <meta name="author" content="ME Marketing">
+            <meta name="theme-color" content="#ffffff">
+            <link rel="icon" type="image/png" sizes="512x512" href="/me-favicon.png">
+            <link rel="apple-touch-icon" href="/me-favicon.png">
+            <link rel="canonical" href="https://www.mesocialmediamarketing.com/thank-you-page">
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap">
+            <title>Thank You · ME Marketing</title>
+            <meta name="description" content="Your strategy call request has been received by ME Marketing.">
+            <style>
+              :root{--ink:#111427;--muted:#5e6680;--line:#e2e5ee;--blue:#526df6;--soft:#edf1ff;--orange:#ff3d06}
+              *{box-sizing:border-box}
+              html,body{margin:0;min-height:100%;background:#f8f9fd;color:var(--ink)}
+              body{font-family:Montserrat,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+              a{color:inherit;text-decoration:none}
+              .site-nav{position:relative;z-index:10;background:#fff;border-bottom:1px solid var(--line)}
+              .site-nav-inner{min-height:88px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(24px,5vw,78px);gap:30px}
+              .site-brand-mark img{display:block;width:210px;max-height:76px;object-fit:contain;object-position:left center}
+              .site-nav-list{display:flex;align-items:center;gap:30px;list-style:none;margin:0;padding:0;font-size:14px;font-weight:700;color:#202741}
+              .site-nav-cta a{display:inline-flex;align-items:center;gap:8px;padding:17px 24px;border-radius:999px;background:var(--blue);color:#fff;box-shadow:0 12px 28px rgba(82,109,246,.24)}
+              .page{position:relative;min-height:calc(100vh - 150px);display:grid;place-items:center;padding:56px 24px 72px;overflow:hidden;background:linear-gradient(180deg,#fbfcff 0%,#f5f7fc 100%)}
+              .page:before{content:"";position:absolute;width:650px;height:650px;right:-180px;top:-240px;border-radius:50%;background:radial-gradient(circle,#dbe3ff 0%,rgba(219,227,255,.4) 46%,transparent 72%)}
+              .shell{position:relative;z-index:1;width:min(1120px,100%);display:grid;grid-template-columns:.92fr 1.08fr;overflow:hidden;border:1px solid #dfe3ed;border-radius:34px;background:#fff;box-shadow:0 34px 90px rgba(45,58,105,.15)}
+              .visual,.content{padding:clamp(42px,6vw,82px)}
+              .visual{background:linear-gradient(145deg,#f7f8ff 0%,#e7ecff 100%)}
+              .check{width:76px;height:76px;display:grid;place-items:center;margin-bottom:38px;border-radius:50%;background:var(--orange);color:#111;font-family:Arial,sans-serif;font-size:39px;font-weight:700}
+              .eyebrow{margin:0 0 20px;font-size:12px;font-weight:800;letter-spacing:.17em;text-transform:uppercase;color:#717991}
+              .content .eyebrow{color:var(--blue)}
+              h1,h2{margin:0;letter-spacing:-.065em;font-weight:500;line-height:.99}
+              h2{font-size:clamp(52px,6.5vw,82px)}
+              h1{font-size:clamp(46px,6vw,76px)}
+              .lead{margin:26px 0 0;font-size:19px;line-height:1.7;color:var(--muted)}
+              .steps{margin:36px 0 34px;border-top:1px solid var(--line)}
+              .step{display:grid;grid-template-columns:45px 1fr;gap:14px;padding:17px 0;border-bottom:1px solid var(--line);font-size:15px;line-height:1.5;color:#404960}
+              .step b{font-size:12px;color:#9299aa}
+              .actions{display:flex;flex-wrap:wrap;gap:12px}
+              .button{min-height:54px;display:inline-flex;align-items:center;justify-content:center;padding:0 25px;border-radius:999px;font-size:14px;font-weight:800}
+              .primary{background:var(--blue);color:#fff;box-shadow:0 12px 25px rgba(82,109,246,.22)}
+              .secondary{border:1px solid #d6dae6;background:#fff}
+              .foot{min-height:62px;display:flex;align-items:center;justify-content:space-between;padding:18px clamp(24px,5vw,78px);gap:20px;border-top:1px solid var(--line);background:#fff;color:#747c91;font-size:12px}
+              @media(max-width:900px){.site-nav-list li:not(.site-nav-cta){display:none}.site-brand-mark img{width:175px}.shell{grid-template-columns:1fr}.visual,.content{padding:40px 32px}}
+              @media(max-width:560px){.site-nav-inner{min-height:75px;padding:0 16px}.site-brand-mark img{width:132px}.site-nav-cta a{padding:13px 15px;font-size:11px}.page{padding:20px 10px 34px}.shell{border-radius:23px}.visual,.content{padding:32px 23px}.check{width:62px;height:62px;margin-bottom:27px;font-size:31px}h2{font-size:47px}h1{font-size:43px}.lead{font-size:17px}.actions{flex-direction:column}.button{width:100%}.foot{align-items:flex-start;flex-direction:column;padding:20px}}
+            </style>
+          </head>
+          <body>
+            <header class="site-nav">
+              <nav class="site-nav-inner" aria-label="Primary navigation">
+                <a href="/" class="site-brand-mark" aria-label="ME Marketing home"><img src="/me-infinity-logo-transparent.png" alt="ME Marketing infinity logo"></a>
+                <ul class="site-nav-list">
+                  <li><a href="/#services">Services</a></li>
+                  <li><a href="/#automation">Automation + AI</a></li>
+                  <li><a href="/#work">Work</a></li>
+                  <li><a href="/about.html">About</a></li>
+                  <li><a href="/faq.html">FAQ</a></li>
+                  <li class="site-nav-cta"><a href="/contact.html">Book a Strategy Call <span aria-hidden="true">↗</span></a></li>
+                </ul>
+              </nav>
+            </header>
+            <main class="page">
+              <article class="shell">
+                <section class="visual">
+                  <div class="check" aria-hidden="true">✓</div>
+                  <p class="eyebrow">Request received</p>
+                  <h2>Let’s build<br>what’s next.</h2>
+                  <p class="lead">Thanks for reaching out. The ME Marketing team will contact you shortly to arrange your strategy call.</p>
+                </section>
+                <section class="content">
+                  <p class="eyebrow">What happens next</p>
+                  <h1>Your request<br>is in.</h1>
+                  <p class="lead">We’ll review your goals, current setup and the constraint slowing progress, then contact you with the clearest next step.</p>
+                  <div class="steps">
+                    <div class="step"><b>01</b><span>We review the information you shared.</span></div>
+                    <div class="step"><b>02</b><span>We identify the most useful starting point.</span></div>
+                    <div class="step"><b>03</b><span>A team member contacts you directly.</span></div>
+                  </div>
+                  <div class="actions">
+                    <a class="button primary" href="/">Back to home</a>
+                    <a class="button secondary" href="/contact.html">Send another request</a>
+                  </div>
+                </section>
+              </article>
+            </main>
+            <footer class="foot"><span>© 2026 ME Marketing.</span><span>Human judgment stays in the loop.</span></footer>
+          </body>
+          </html>
+          HTML
+          cp /tmp/thank-you-page.html sites/me-marketing-live/thank-you-page
+          cp /tmp/thank-you-page.html sites/me-marketing-live/thank-you-page.html
+      - name: Write deployment manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          files = [
+              Path('sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js'),
+              Path('sites/me-marketing-live/thank-you-page'),
+              Path('sites/me-marketing-live/thank-you-page.html'),
+          ]
+          manifest = {}
+          for path in files:
+              data = path.read_bytes()
+              manifest[str(path.relative_to('sites/me-marketing-live'))] = {
+                  'size': len(data),
+                  'md5': hashlib.md5(data).hexdigest(),
+              }
+          Path('sites/me-marketing-live/deployment-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+          PY
+          cat sites/me-marketing-live/deployment-manifest.json
+      - name: Commit deployable files
         shell: bash
         run: |
           set -euo pipefail
@@ -39,6 +165,6 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add sites/me-marketing-live
           if ! git diff --cached --quiet; then
-            git commit -m 'Capture actual live ME Marketing frontend [skip ci]'
+            git commit -m 'Build real ME Marketing Thank You route [skip ci]'
             git push origin HEAD:me-marketing-upload-temp
           fi
