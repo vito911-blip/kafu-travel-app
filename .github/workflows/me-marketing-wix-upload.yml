@@ -1,4 +1,4 @@
-name: Upload patched ME Marketing worker
+name: Verify patched ME Marketing deployment
 
 on:
   push:
@@ -6,26 +6,45 @@ on:
       - me-marketing-upload-temp
 
 jobs:
-  upload:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      BASE_URL: 'https://dufnha-me-marketi-7c79f713-kafutravelae.wix-site-host.com'
     steps:
-      - uses: actions/checkout@v4
-      - name: Verify worker
+      - name: Wait for deployment readiness
+        run: sleep 10
+      - name: Verify worker routes
         shell: bash
         run: |
           set -euo pipefail
-          node --check sites/me-marketing/entry.mjs
-          test "$(wc -c < sites/me-marketing/entry.mjs | tr -d ' ')" = "9831"
-          echo '2940f64177a149899868592a0382046e  sites/me-marketing/entry.mjs' | md5sum --check --status
-      - name: Upload to isolated Wix deployment
+          stamp="$GITHUB_RUN_ID"
+          curl --fail --silent --show-error "$BASE_URL/__me-proxy-health?verify=$stamp" --output /tmp/health.json
+          grep -q '"version":"v8"' /tmp/health.json
+
+          curl --fail --silent --show-error --dump-header /tmp/thank.headers "$BASE_URL/thank-you-page?verify=$stamp" --output /tmp/thank.html
+          grep -qi '^x-me-marketing-route: thank-you-page-v8' /tmp/thank.headers
+          grep -q 'Your request is in.' /tmp/thank.html
+          grep -q 'Back to home' /tmp/thank.html
+
+          curl --fail --silent --show-error --dump-header /tmp/script.headers "$BASE_URL/__me-thank-you-redirect.js?verify=$stamp" --output /tmp/redirect.js
+          grep -qi '^x-me-marketing-route: redirect-script-v8' /tmp/script.headers
+          grep -q "window.location.replace('/thank-you-page')" /tmp/redirect.js
+      - name: Verify current website preservation and form hook
         shell: bash
-        env:
-          UPLOAD_URL: 'https://wix-code-file-storage.s3.amazonaws.com/e115d009-de90-4f65-a63e-032acdc78c5c/statics/fd6ab0ed-1659-4563-8aa7-543bae5a0636/2940f64177a149899868592a0382046e?X-Amz-Security-Token=IQoJb3JpZ2luX2VjECoaCXVzLXdlc3QtMiJHMEUCIQCiirCEIhs6iyUEbj9MJKuSn5B4bWeCfrAL4bNhZy1ksgIgFhEzEBrUGqsWVczMFxw%2Fgaub9LVHhuT32WDbSprrLMMqzgUI8v%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARAFGgw0MTUyMDg3NTY1NjEiDDIYHPWrrcWpbAWDZyqiBSNnuJaL9dC9du3ySJgSTuqJTOWgqBZJrdnjEsjHZhemiUE1myNYb0tHDFFOwdDzNs6nl5OhrI3SVwtMxrQUNOdBPrbTahzhl%2FSY66a1Q6eZhiKWh5nCnr3ZqC0wo01ZC4J%2FK8JXwdRrMaQfb23jim3pLrkTrDWpwlJie7DsHlE1HwkiiJZLuYvdDiGPSOJ3GzYpH7EyDop1gFpDR%2BVcH4AgC%2FggQ1Z%2Bjt1RGWQXGcAKgI1eYgPaRzZxd8q3XkyuMwKbGM3ka6RyhQfpbrc2%2BN8MdJuU0LYhp50D7fLHelGjpA4RSOFiw8NfVD%2Bq6rtEdWfeKgti2SQt%2BWmwMwWajnR%2F4IIkL2BCcfQOBidpZ5vaO4SlVW5cXQOR%2FYI%2BECjuvnG3WCPT9OXM4vqMJ%2FKKjvoHaq3I1DYMkTOJgOAU8%2F%2BGAOqwnickr0hdHPJbhTzN9hMQ8rpzzO83amFw9rFcXeobap1sFDPI%2BtlEJpyPbjOBIjJ%2BCJ%2B%2Fct9Gi0uH7VHkPkXIGk2Jb1Axv%2BLaP4rDuiYM1%2F7isu4xYARFjuj4M8vOTED%2Flge8YvshWqe6OIda0zidqakxo06k2fK8p%2FO2Oa7RDlCmaZBGSalzGzczmbYNrCCafhS8G7qmSvgS11UDu9d3PcrlCzmofKleSBXpghEGXGNHQjhS8hMhyb9y0tV8DqigpYi9n57q9NTGrhFC2uZOa8M1LEmotuiwIvnlbtiLSGI2UMpTYxIqaCotauhv8qSq82BmWHfqS%2BF9AC%2Fu5%2FjW9wvwo3SeJ0Yhp0pDn%2F%2Bx5SIsf3JF0xjxgN%2BHHh5m4k65BgV9SaviYdjqofGjQ8QaDmX1QwspE0Mw7tbWK5b1iKo7qJJyN%2FZjkpeDWTxPFuR8%2FHsrtWUz1%2FfjDsOyKoiGMPWk6tQGOpAB6kTT%2BBdEEBkZ38k7Lm0Z1KW5NrBJFsnLqfear4RJ2LsOLkt51LR%2Fg3eGJimAffSylDOTdJqitNfPDeFvk14o8OK4Exy2c67OY%2FrxMGFjsgSFACfwSjsW5SVxtkAnKOJpo69yS354leAtb1R48oFqR6GrzZCNH9k%2FXQP4VjrzMqV7kWd1VfCeEXnGwd76tTOE&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260904T132302Z&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Credential=ASIAWBLC62VI7SVZB4GA%2F20260904%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=3600&X-Amz-Signature=bd31d0e84289dc95dba3a4787fda89f667d632b816f44eab7a4fa2a953445927'
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --request PUT \
-            --header 'Content-Type: application/javascript' \
-            --data-binary @sites/me-marketing/entry.mjs \
-            "$UPLOAD_URL"
-          echo UPLOAD_OK
+          stamp="$GITHUB_RUN_ID"
+          curl --fail --silent --show-error --dump-header /tmp/contact.headers "$BASE_URL/contact.html?verify=$stamp" --output /tmp/contact.html
+          grep -qi '^x-me-marketing-proxy: contact-v8' /tmp/contact.headers
+          grep -q 'ME_THANK_YOU_REDIRECT_V8' /tmp/contact.html
+          grep -qi 'Bring us the messy part\|Book a Strategy Call' /tmp/contact.html
+
+          for path in / /audit.html /about.html /faq.html; do
+            name=$(printf '%s' "$path" | tr '/.' '__')
+            code=$(curl --silent --show-error --output "/tmp/${name}.html" --write-out '%{http_code}' "$BASE_URL$path?verify=$stamp")
+            test "$code" = "200"
+          done
+          grep -qi 'Smart strategies\|ME Marketing' /tmp/_.html
+      - name: Preview verified
+        run: echo PREVIEW_VERIFIED_V8
