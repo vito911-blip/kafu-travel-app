@@ -1,4 +1,4 @@
-name: Upload ME Marketing v9 worker
+name: Verify ME Marketing v9 deployment
 
 on:
   push:
@@ -6,28 +6,52 @@ on:
       - me-marketing-upload-temp
 
 jobs:
-  upload:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      BASE_URL: 'https://ywjxjz-me-marketi-7c79f713-kafutravelae.wix-site-host.com'
+      LIVE_URL: 'https://www.mesocialmediamarketing.com'
     steps:
-      - uses: actions/checkout@v4
-      - name: Verify source
+      - name: Wait for deployment readiness
+        run: sleep 10
+      - name: Verify real Thank You route
         shell: bash
         run: |
           set -euo pipefail
-          node --check sites/me-marketing/entry.mjs
-          test "$(wc -c < sites/me-marketing/entry.mjs | tr -d ' ')" = "8578"
-          echo '4af9a74407e611b47ceefc80ebc88103  sites/me-marketing/entry.mjs' | md5sum --check --status
-          grep -q 'ME_THANK_YOU_REDIRECT_V9' sites/me-marketing/entry.mjs
-      - name: Upload to isolated Wix deployment
+          stamp="$GITHUB_RUN_ID"
+          curl --fail --silent --show-error "$BASE_URL/__me-proxy-health?verify=$stamp" --output /tmp/health.json
+          grep -q '"version":"v9"' /tmp/health.json
+
+          curl --fail --silent --show-error --dump-header /tmp/thank.headers "$BASE_URL/thank-you-page?verify=$stamp" --output /tmp/thank.html
+          grep -qi '^x-me-marketing-route: thank-you-page-v9' /tmp/thank.headers
+          grep -q 'Your request is in.' /tmp/thank.html
+          grep -q 'Back to home' /tmp/thank.html
+          grep -q 'Book a Strategy Call' /tmp/thank.html
+
+          curl --fail --silent --show-error --dump-header /tmp/script.headers "$BASE_URL/__me-thank-you-redirect.js?verify=$stamp" --output /tmp/redirect.js
+          grep -qi '^x-me-marketing-route: redirect-script-v9' /tmp/script.headers
+          grep -q "window.location.replace('/thank-you-page')" /tmp/redirect.js
+      - name: Verify form hook and preserve existing pages
         shell: bash
-        env:
-          UPLOAD_URL_B64: 'aHR0cHM6Ly93aXgtY29kZS1maWxlLXN0b3JhZ2UuczMuYW1hem9uYXdzLmNvbS9lMTE1ZDAwOS1kZTkwLTRmNjUtYTYzZS0wMzJhY2RjNzhjNWMvc3RhdGljcy9mZDZhYjBlZC0xNjU5LTQ1NjMtOGFhNy01NDNiYWU1YTA2MzYvNGFmOWE3NDQwN2U2MTFiNDdjZWVmYzgwZWJjODgxMDM/WC1BbXotU2VjdXJpdHktVG9rZW49SVFvSmIzSnBaMmx1WDJWakVDd2FDWFZ6TFhkbGMzUXRNaUpITUVVQ0lBRENyb3lhbWpVeFdkNER1YjhjMVVnVzUxWWFjTE9henhYNnJzZnZuQnY2QWlFQXRUUksxOUt0M2g3dldmWjFERTQ4ckRuWmVrR0pJeFdrMHluNFNwc1pFJTJGVXF6Z1VJOWYlMkYlMkYlMkYlMkYlMkYlMkYlMkYlMkYlMkYlMkZBUkFGR2d3ME1UVXlNRGczTlRZMU5qRWlETjNsMlVZM3dtdTYlMkJObnQ4eXFpQlZaSWt3bUplalRIYzZZSFhybm5GY1JlUGxQSWFqNmw1M24lMkZkclNJVjIxWTJSMnBINFZTYTVtY0NhUFFta0JVR1hKRzhKWURkQVdnaFdGdXpNdGZVYUdLRkVQbUtRcnQ1UUtWN0dDSklDYThvR0JXTGU5aTkwJTJGelVhNGIwREk3Vmtzc0RwOUJ5Zk4wNGZYQWxkNWtDU0Z4d3pSSnZaZjZwcW51cFBBT29mNVpWcTBEcldjVnQlMkZzYjN4bERGdHZmM0ozRWF2dHVmJTJCdFNXJTJGUzNobnRPQlVhUmtuUkgzN1JpbHI2ZFY2UGJHbWJyNGFQRGNtN3ZDU3l1NEJGVkRjTUxBRWx0bVI4RFh5ZXVIcDhJOGpzZmlOWnFpWERWbTViRyUyQnc1Y3QwQWtyNTZYMHNEaVM0RmJzS3UlMkJ6cXV2cEJzJTJGN2wlMkZTOUdJSG9hSFl5aUF2dFpDJTJGQ0ZueCUyQjAlMkIlMkJCZXBLRWhqOUxIaGNZRHNFTWRxamtuVkh5dzZMJTJGTGlKblo2dTJWR2Jub1BKTUdJJTJGTk44WDF1TVZIaERwNUgzc1N3eXZlcWMlMkZySFY3QlFwMWcxUGtaZHd0JTJCOWJnODAyNXA4WHBjUjBtdFE3QjV0cWY0VGJzMDc5RE5uZlV0TnVHVlB4S0RTN0dwbHdnTE1pMEJNdDFscGw4dXl4b3A1djBaQm43eEJTNlIlMkJ6U0tkMVdTV1N2bWF2WVFUWnUlMkZ1YXRsRDhkbEF1eWdSVVpRS05sdTVJTCUyRmF6b1o0b1M1UEdlemVmMng4U3FURG1KUHR3VjR6JTJGaDZ2b1pXbTdtODJNTGtyQ0cxVkJXbTBJcGo5MXNCJTJCeFY5V1clMkZFa1p2WVBtQWpidlZzNlZqeVJVaVlGTXlUODJVbVhKTmI3SXRJaGppVHdIc05DTzNKaHA1MHNtakZ5N29EMGVqVUdYZGYydlIlMkJSZTJYSzdYcGhobFdlRVklMkZHR1lLZENtVEJJYkRWMFViNUJKJTJCJTJGWlp6RlRuN095cjBPRXgyMjFidGRHTERCczQlMkZWSjFOc3lETldiVlhDZXolMkJOJTJCU1J4QjRkc20lMkZWMEtZSXFtUW9qRlJIY1ZqcU1GaXVSdWZ3WmElMkJ6R3N0Zlh2QjVHRThHZGNpWUF3WTdSYWloYVAza09TN09OOXZRZUZIVlhoNTdKaTd1SURKTHBrZnhmRjclMkY5V3RBSWwwNnBSa1dYYSUyQlp5WmlNTlhxNnRRR09wQUJKaFNjM1paN3plQVJqWkI2TEJHQ0tGJTJCdk5FJTJGNiUyRnhGenRyMkJEYURkZlFiYXdYbSUyRkxPJTJGNGJxV2E5VXUxTTYlMkZ2VDJQTFdaNzJXJTJCbWxHQnRqeWo1cXkzSkJOVjFWMGhkQ0JwS0RMVUp1JTJGJTJGRHRpQVU0MUhxRlNMRkFHd1Nnd2Y2Y2NGS0NnbTdHZ1olMkY1VlZJNFd1RTR4YzVEOVVKUWtHaXowRzh4VU9mdWI3YWExUUgyakZHNWltUWoxdHdyOGl6RCZYLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1EYXRlPTIwMjYwOTA0VDEzMzI0MlomWC1BbXotU2lnbmVkSGVhZGVycz1jb250ZW50LXR5cGUlM0Job3N0JlgtQW16LUNyZWRlbnRpYWw9QVNJQVdCTEM2MlZJVElHQkZFN1glMkYyMDI2MDkwNCUyRnVzLWVhc3QtMSUyRnMzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LUV4cGlyZXM9MzYwMCZYLUFtei1TaWduYXR1cmU9OWFkOGRlNDFjY2Y0Mjg1ZmQwOTQ3YThhYjgzY2ExNzEzZDg0MGFkNWY3OGQwZGFkNGRmMGFjODAwNmJlZTNmZg=='
         run: |
           set -euo pipefail
-          UPLOAD_URL="$(printf '%s' "$UPLOAD_URL_B64" | base64 --decode)"
-          curl --fail --silent --show-error --request PUT \
-            --header 'Content-Type: application/javascript' \
-            --data-binary @sites/me-marketing/entry.mjs \
-            "$UPLOAD_URL"
-          echo UPLOAD_OK
+          stamp="$GITHUB_RUN_ID"
+          curl --fail --silent --show-error --dump-header /tmp/contact.headers "$BASE_URL/contact.html?verify=$stamp" --output /tmp/contact.html
+          grep -qi '^x-me-marketing-proxy: contact-v9' /tmp/contact.headers
+          grep -q 'ME_THANK_YOU_REDIRECT_V9' /tmp/contact.html
+          grep -qi 'Book a Strategy Call\|messy part\|REQUEST RECEIVED' /tmp/contact.html
+
+          for path in / /audit.html /about.html /faq.html; do
+            name=$(printf '%s' "$path" | tr '/.' '__')
+            code=$(curl --silent --show-error --output "/tmp/preview-${name}.html" --write-out '%{http_code}' "$BASE_URL$path?verify=$stamp")
+            test "$code" = "200"
+            live_code=$(curl --silent --show-error --output "/tmp/live-${name}.html" --write-out '%{http_code}' "$LIVE_URL$path?verify=$stamp")
+            test "$live_code" = "200"
+          done
+          grep -qi 'Smart strategies\|ME Marketing' /tmp/preview-_.html
+          grep -qi 'Free audit\|Audit' /tmp/preview-_audit_html.html
+          grep -qi 'About\|ME Marketing' /tmp/preview-_about_html.html
+          grep -qi 'FAQ\|questions' /tmp/preview-_faq_html.html
+      - name: Preview verified
+        run: echo PREVIEW_VERIFIED_V9
