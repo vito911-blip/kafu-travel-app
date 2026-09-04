@@ -1,41 +1,44 @@
-name: Diagnose ME Marketing production routing
+name: Fetch actual live ME Marketing frontend files
 
 on:
   push:
     branches:
       - me-marketing-upload-temp
 
+permissions:
+  contents: write
+
 jobs:
-  diagnose:
+  fetch-live-files:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect domain and worker routes
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: me-marketing-upload-temp
+          fetch-depth: 0
+      - name: Download current production files
         shell: bash
         run: |
           set -euo pipefail
-          echo 'DNS'
-          dig +short www.mesocialmediamarketing.com || true
-          for item in \
-            'live|https://www.mesocialmediamarketing.com' \
-            'primary|https://me-marketi-7c79f713-kafutravelae.wix-site-host.com' \
-            'new|https://ywjxjz-me-marketi-7c79f713-kafutravelae.wix-site-host.com' \
-            'old|https://3zpa7h-me-marketi-7c79f713-kafutravelae.wix-site-host.com'; do
-            label="${item%%|*}"
-            base="${item#*|}"
-            for path in /__me-proxy-health /thank-you-page /contact.html /; do
-              safe=$(printf '%s' "$path" | tr '/.' '__')
-              code=$(curl --silent --show-error --max-time 30 --max-redirs 0 --dump-header "/tmp/${label}-${safe}.headers" --output "/tmp/${label}-${safe}.body" --write-out '%{http_code}' "$base$path?diag=$GITHUB_RUN_ID" || true)
-              echo "$label $path status=$code bytes=$(wc -c < "/tmp/${label}-${safe}.body" | tr -d ' ')"
-              grep -Ei '^(location|x-me-marketing-route|x-me-marketing-proxy|server|x-wix|via):' "/tmp/${label}-${safe}.headers" || true
-            done
-          done
-      - name: Test host-routed new worker
+          base='https://bf9wic-me-marketi-cab8d612-bsmarket12.wix-site-host.com'
+          mkdir -p sites/me-marketing-live/_astro
+          curl --fail --silent --show-error "$base/contact.html" -o sites/me-marketing-live/contact.html
+          curl --fail --silent --show-error "$base/index.html" -o sites/me-marketing-live/index.html
+          curl --fail --silent --show-error "$base/_astro/ContactForm.Cy6qf6_z.js" -o sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js
+          node --check sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js
+          test "$(wc -c < sites/me-marketing-live/contact.html | tr -d ' ')" = '18889'
+          test "$(wc -c < sites/me-marketing-live/_astro/ContactForm.Cy6qf6_z.js | tr -d ' ')" = '4758'
+      - name: Commit captured files
         shell: bash
         run: |
           set -euo pipefail
-          base='https://ywjxjz-me-marketi-7c79f713-kafutravelae.wix-site-host.com'
-          for host in www.mesocialmediamarketing.com mesocialmediamarketing.com; do
-            code=$(curl --silent --show-error --max-time 30 --header "Host: $host" --output /tmp/host.body --write-out '%{http_code}' "$base/__me-proxy-health?diag=$GITHUB_RUN_ID" || true)
-            echo "new worker Host=$host status=$code body=$(cat /tmp/host.body)"
-          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sites/me-marketing-live
+          if ! git diff --cached --quiet; then
+            git commit -m 'Capture actual live ME Marketing frontend [skip ci]'
+            git push origin HEAD:me-marketing-upload-temp
+          fi
