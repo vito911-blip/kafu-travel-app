@@ -1,0 +1,30 @@
+name: One-time ME Marketing Wix upload
+
+on:
+  push:
+    branches:
+      - me-marketing-upload-temp
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(wc -c < sites/me-marketing/entry.mjs | tr -d ' ')" = "9782"
+          echo 'd53e2b815e3fa9e0d93b0e66093648d8  sites/me-marketing/entry.mjs' | md5sum --check --status
+      - name: Upload worker
+        shell: bash
+        env:
+          UPLOAD_URL: 'https://wix-code-file-storage.s3.amazonaws.com/e115d009-de90-4f65-a63e-032acdc78c5c/statics/fd6ab0ed-1659-4563-8aa7-543bae5a0636/d53e2b815e3fa9e0d93b0e66093648d8?X-Amz-Security-Token=IQoJb3JpZ2luX2VjECoaCXVzLXdlc3QtMiJHMEUCIQCiirCEIhs6iyUEbj9MJKuSn5B4bWeCfrAL4bNhZy1ksgIgFhEzEBrUGqsWVczMFxw%2Fgaub9LVHhuT32WDbSprrLMMqzgUI8v%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARAFGgw0MTUyMDg3NTY1NjEiDDIYHPWrrcWpbAWDZyqiBSNnuJaL9dC9du3ySJgSTuqJTOWgqBZJrdnjEsjHZhemiUE1myNYb0tHDFFOwdDzNs6nl5OhrI3SVwtMxrQUNOdBPrbTahzhl%2FSY66a1Q6eZhiKWh5nCnr3ZqC0wo01ZC4J%2FK8JXwdRrMaQfb23jim3pLrkTrDWpwlJie7DsHlE1HwkiiJZLuYvdDiGPSOJ3GzYpH7EyDop1gFpDR%2BVcH4AgC%2FggQ1Z%2Bjt1RGWQXGcAKgI1eYgPaRzZxd8q3XkyuMwKbGM3ka6RyhQfpbrc2%2BN8MdJuU0LYhp50D7fLHelGjpA4RSOFiw8NfVD%2Bq6rtEdWfeKgti2SQt%2BWmwMwWajnR%2F4IIkL2BCcfQOBidpZ5vaO4SlVW5cXQOR%2FYI%2BECjuvnG3WCPT9OXM4vqMJ%2FKKjvoHaq3I1DYMkTOJgOAU8%2F%2BGAOqwnickr0hdHPJbhTzN9hMQ8rpzzO83amFw9rFcXeobap1sFDPI%2BtlEJpyPbjOBIjJ%2BCJ%2B%2Fct9Gi0uH7VHkPkXIGk2Jb1Axv%2BLaP4rDuiYM1%2F7isu4xYARFjuj4M8vOTED%2Flge8YvshWqe6OIda0zidqakxo06k2fK8p%2FO2Oa7RDlCmaZBGSalzGzczmbYNrCCafhS8G7qmSvgS11UDu9d3PcrlCzmofKleSBXpghEGXGNHQjhS8hMhyb9y0tV8DqigpYi9n57q9NTGrhFC2uZOa8M1LEmotuiwIvnlbtiLSGI2UMpTYxIqaCotauhv8qSq82BmWHfqS%2BF9AC%2Fu5%2FjW9wvwo3SeJ0Yhp0pDn%2F%2Bx5SIsf3JF0xjxgN%2BHHh5m4k65BgV9SaviYdjqofGjQ8QaDmX1QwspE0Mw7tbWK5b1iKo7qJJyN%2FZjkpeDWTxPFuR8%2FHsrtWUz1%2FfjDsOyKoiGMPWk6tQGOpAB6kTT%2BBdEEBkZ38k7Lm0Z1KW5NrBJFsnLqfear4RJ2LsOLkt51LR%2Fg3eGJimAffSylDOTdJqitNfPDeFvk14o8OK4Exy2c67OY%2FrxMGFjsgSFACfwSjsW5SVxtkAnKOJpo69yS354leAtb1R48oFqR6GrzZCNH9k%2FXQP4VjrzMqV7kWd1VfCeEXnGwd76tTOE&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260904T131156Z&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Credential=ASIAWBLC62VI7SVZB4GA%2F20260904%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=3600&X-Amz-Signature=858dfe1afe97da0cc99127985c90700c49df90173510c8fb1d8f82a97faaf019'
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --request PUT \
+            --header 'Content-Type: application/javascript' \
+            --data-binary @sites/me-marketing/entry.mjs \
+            "$UPLOAD_URL"
+          echo UPLOAD_OK
